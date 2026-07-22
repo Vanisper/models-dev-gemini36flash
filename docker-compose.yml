@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  models-catalog:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: models-catalog-viewer
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+    restart: unless-stopped
