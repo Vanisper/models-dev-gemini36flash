@@ -1,19 +1,32 @@
 import { NestFactory } from '@nestjs/core';
+import { ExpressAdapter } from '@nestjs/platform-express';
+import express from 'express';
 import { AppModule } from '../packages/backend/src/app.module';
 
-let cachedServer: any;
+const expressApp = express();
+let isInitialized = false;
 
-async function bootstrapServer() {
-  if (!cachedServer) {
-    const app = await NestFactory.create(AppModule);
-    app.enableCors();
-    await app.init();
-    cachedServer = app.getHttpAdapter().getInstance();
+async function bootstrap() {
+  if (!isInitialized) {
+    const nestApp = await NestFactory.create(
+      AppModule,
+      new ExpressAdapter(expressApp),
+    );
+    nestApp.enableCors();
+    await nestApp.init();
+    isInitialized = true;
   }
-  return cachedServer;
 }
 
 export default async function handler(req: any, res: any) {
-  const server = await bootstrapServer();
-  server(req, res);
+  try {
+    await bootstrap();
+    expressApp(req, res);
+  } catch (err: any) {
+    console.error('Vercel Serverless Function Error:', err);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: err?.message || String(err),
+    });
+  }
 }

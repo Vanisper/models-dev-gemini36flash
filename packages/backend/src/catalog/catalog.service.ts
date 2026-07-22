@@ -247,11 +247,10 @@ export class CatalogService implements OnModuleInit {
   }
 
   private async ensureData(): Promise<CatalogData> {
-    if (!this.catalogData) {
+    if (!this.catalogData || !this.catalogData.models || this.catalogData.models.length === 0) {
       await this.loadInitialData();
     }
     if (!this.catalogData) {
-      // Fallback empty data if all else fails
       this.catalogData = {
         models: [],
         labs: [],
