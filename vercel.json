@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "framework": "vite",
-  "buildCommand": "pnpm run update-data && pnpm run build",
+  "framework": null,
+  "buildCommand": "pnpm run update-data && pnpm --filter @catalog/frontend build && pnpm --filter @catalog/backend build",
   "outputDirectory": "packages/frontend/dist",
   "functions": {
     "api/index.ts": {

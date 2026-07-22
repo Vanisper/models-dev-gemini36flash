@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "pnpm --parallel --filter \"@catalog/*\" dev",
-    "build": "pnpm --filter \"@catalog/*\" build",
+    "build": "pnpm --filter \"@catalog/frontend\" build && pnpm --filter \"@catalog/backend\" build",
     "start": "pnpm --filter \"@catalog/backend\" start:prod",
     "update-data": "pnpm --filter \"@catalog/backend\" update-data"
   },
