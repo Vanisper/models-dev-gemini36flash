@@ -5,15 +5,18 @@ import * as fs from 'fs';
 import { CatalogController } from './catalog/catalog.controller';
 import { CatalogService } from './catalog/catalog.service';
 
+const isVercel = process.env.VERCEL === '1';
 const staticPath = path.join(__dirname, '..', '..', 'frontend', 'dist');
-const serveStaticImports = fs.existsSync(staticPath)
-  ? [
-      ServeStaticModule.forRoot({
-        rootPath: staticPath,
-        exclude: ['/api/(.*)'],
-      }),
-    ]
-  : [];
+
+const serveStaticImports =
+  !isVercel && fs.existsSync(staticPath)
+    ? [
+        ServeStaticModule.forRoot({
+          rootPath: staticPath,
+          exclude: ['/api/(.*)'],
+        }),
+      ]
+    : [];
 
 @Module({
   imports: [...serveStaticImports],

@@ -1,10 +1,18 @@
+import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../packages/backend/src/app.module';
 
 let cachedServer: any;
 
 async function bootstrapServer() {
   if (!cachedServer) {
+    let AppModule;
+    try {
+      // Import compiled dist module first (emitted with NestJS decorator metadata)
+      AppModule = require('../packages/backend/dist/app.module').AppModule;
+    } catch (e) {
+      AppModule = require('../packages/backend/src/app.module').AppModule;
+    }
+
     const app = await NestFactory.create(AppModule);
     app.enableCors();
     await app.init();

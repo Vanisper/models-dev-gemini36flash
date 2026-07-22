@@ -14,12 +14,6 @@ import { fetchAndMergeData } from './data-merger';
 export class CatalogService implements OnModuleInit {
   private readonly logger = new Logger(CatalogService.name);
   private catalogData: CatalogData | null = null;
-  private readonly cacheFilePath = path.join(
-    __dirname,
-    '..',
-    'data',
-    'catalog-cache.json',
-  );
 
   async onModuleInit() {
     this.logger.log('Initializing CatalogService data...');
@@ -42,33 +36,49 @@ export class CatalogService implements OnModuleInit {
       return;
     } catch (e: any) {
       this.logger.warn(
-        `Live fetch failed: ${e.message}. Falling back to cached file...`,
+        `Live fetch failed: ${e.message}. Falling back to cached files...`,
       );
     }
 
-    // 2. Fallback to cached JSON file if available
-    if (fs.existsSync(this.cacheFilePath)) {
-      try {
-        const raw = fs.readFileSync(this.cacheFilePath, 'utf-8');
-        this.catalogData = JSON.parse(raw);
-        this.logger.log(
-          `Loaded cached data from file: ${this.catalogData?.models?.length || 0} models.`,
-        );
-      } catch (e: any) {
-        this.logger.error(`Failed to read cache file: ${e.message}`);
+    // 2. Fallback to cached JSON file across candidate locations
+    const candidatePaths = [
+      path.join(__dirname, '..', 'data', 'catalog-cache.json'),
+      path.join(__dirname, 'data', 'catalog-cache.json'),
+      path.join(process.cwd(), 'packages', 'backend', 'src', 'data', 'catalog-cache.json'),
+      path.join(process.cwd(), 'packages', 'backend', 'dist', 'data', 'catalog-cache.json'),
+      path.join(process.cwd(), 'src', 'data', 'catalog-cache.json'),
+    ];
+
+    for (const cachePath of candidatePaths) {
+      if (fs.existsSync(cachePath)) {
+        try {
+          const raw = fs.readFileSync(cachePath, 'utf-8');
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.models) && parsed.models.length > 0) {
+            this.catalogData = parsed;
+            this.logger.log(
+              `Loaded cached data from ${cachePath}: ${this.catalogData.models.length} models.`,
+            );
+            return;
+          }
+        } catch (e: any) {
+          this.logger.warn(`Error reading cache at ${cachePath}: ${e.message}`);
+        }
       }
     }
   }
 
   private saveCacheToFile(data: CatalogData) {
     try {
-      const dir = path.dirname(this.cacheFilePath);
+      const cachePath = path.join(__dirname, '..', 'data', 'catalog-cache.json');
+      const dir = path.dirname(cachePath);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
-      fs.writeFileSync(this.cacheFilePath, JSON.stringify(data, null, 2), 'utf-8');
-      this.logger.log(`Saved updated catalog cache to ${this.cacheFilePath}`);
+      fs.writeFileSync(cachePath, JSON.stringify(data, null, 2), 'utf-8');
+      this.logger.log(`Saved updated catalog cache to ${cachePath}`);
     } catch (e: any) {
+      // In serverless / read-only environment, saving cache to disk might be ignored
       this.logger.warn(`Could not save cache to file: ${e.message}`);
     }
   }
@@ -247,11 +257,10 @@ export class CatalogService implements OnModuleInit {
   }
 
   private async ensureData(): Promise<CatalogData> {
-    if (!this.catalogData) {
+    if (!this.catalogData || !this.catalogData.models || this.catalogData.models.length === 0) {
       await this.loadInitialData();
     }
     if (!this.catalogData) {
-      // Fallback empty data if all else fails
       this.catalogData = {
         models: [],
         labs: [],
